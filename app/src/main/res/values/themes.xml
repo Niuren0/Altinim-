@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.Altinim" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/parchment</item>
+        <item name="android:statusBarColor">#1C2B39</item>
+    </style>
+</resources>

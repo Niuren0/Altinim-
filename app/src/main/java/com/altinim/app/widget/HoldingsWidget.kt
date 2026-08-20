@@ -1,0 +1,114 @@
+package com.altinim.app.widget
+
+import android.content.Context
+import android.content.Intent
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.glance.GlanceId
+import androidx.glance.GlanceModifier
+import androidx.glance.action.clickable
+import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.provideContent
+import androidx.glance.background
+import androidx.glance.layout.Column
+import androidx.glance.layout.Row
+import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.padding
+import androidx.glance.text.FontWeight
+import androidx.glance.text.Text
+import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
+import com.altinim.app.MainActivity
+import com.altinim.app.data.computePortfolioSummary
+import com.altinim.app.data.local.AppDatabase
+import com.altinim.app.data.remote.NetworkModule
+import com.altinim.app.data.repository.GoldEntryRepository
+import com.altinim.app.data.repository.PriceRepository
+import kotlinx.coroutines.flow.first
+
+class HoldingsWidget : GlanceAppWidget() {
+
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val entryRepository = GoldEntryRepository(AppDatabase.getInstance(context).goldEntryDao())
+        val priceRepository = PriceRepository(NetworkModule.kurpanoApi)
+
+        val entries = try {
+            entryRepository.getAllEntries().first()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val products = try {
+            priceRepository.fetchPrices()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val summary = computePortfolioSummary(entries, products)
+        val profitColor = if (summary.profit >= 0) Color(0xFF2F4B3C) else Color(0xFF7A2E2E)
+        val sign = if (summary.profit >= 0) "+" else ""
+
+        provideContent {
+            Column(
+                modifier = GlanceModifier
+                    .fillMaxSize()
+                    .background(Color(0xFFEFE3C0))
+                    .padding(12.dp)
+                    .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
+            ) {
+                Text(
+                    text = "BİRİKİMİM",
+                    style = TextStyle(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ColorProvider(Color(0xFF1C2B39))
+                    )
+                )
+                if (entries.isEmpty()) {
+                    Text(
+                        text = "Henüz kayıt yok",
+                        style = TextStyle(
+                            fontSize = 12.sp,
+                            color = ColorProvider(Color(0xFF6B6152))
+                        )
+                    )
+                } else {
+                    SummaryLine("Yatırılan", "${summary.totalInvested.toInt()} TL")
+                    SummaryLine("Güncel", "${summary.currentValue.toInt()} TL")
+                    SummaryLine("Kâr / Zarar", "$sign${summary.profit.toInt()} TL", profitColor)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryLine(
+    label: String,
+    value: String,
+    valueColor: Color = Color(0xFF26211B)
+) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+    ) {
+        Text(
+            text = label,
+            modifier = GlanceModifier.defaultWeight(),
+            style = TextStyle(fontSize = 12.sp, color = ColorProvider(Color(0xFF6B6152)))
+        )
+        Text(
+            text = value,
+            style = TextStyle(
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = ColorProvider(valueColor)
+            )
+        )
+    }
+}

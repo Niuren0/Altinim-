@@ -85,6 +85,22 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun updateEntry(id: Long, productName: String, amount: Double, unit: String, pricePerUnit: Double, dateMillis: Long) {
+        viewModelScope.launch {
+            entryRepository.updateEntry(
+                GoldEntry(
+                    id = id,
+                    productName = productName,
+                    amount = amount,
+                    unit = unit,
+                    pricePerUnit = pricePerUnit,
+                    dateMillis = dateMillis
+                )
+            )
+            com.altinim.app.widget.HoldingsWidget().updateAll(getApplication())
+        }
+    }
+
     fun deleteEntry(entry: GoldEntry) {
         viewModelScope.launch {
             entryRepository.deleteEntry(entry)

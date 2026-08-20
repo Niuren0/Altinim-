@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -11,6 +12,9 @@ interface GoldEntryDao {
 
     @Insert
     suspend fun insert(entry: GoldEntry)
+
+    @Update
+    suspend fun update(entry: GoldEntry)
 
     @Delete
     suspend fun delete(entry: GoldEntry)

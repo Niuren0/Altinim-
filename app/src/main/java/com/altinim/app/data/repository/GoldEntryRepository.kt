@@ -11,5 +11,7 @@ class GoldEntryRepository(
 
     suspend fun addEntry(entry: GoldEntry) = dao.insert(entry)
 
+    suspend fun updateEntry(entry: GoldEntry) = dao.update(entry)
+
     suspend fun deleteEntry(entry: GoldEntry) = dao.delete(entry)
 }

@@ -205,6 +205,11 @@ fun SettingsScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = InkFaded
         )
+        Text(
+            text = "Geliştirici: Softepen",
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkFaded
+        )
         Spacer(modifier = Modifier.height(12.dp))
 
         UpdateSection(updateViewModel = updateViewModel)

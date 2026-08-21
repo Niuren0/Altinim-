@@ -4,8 +4,12 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -18,12 +22,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.altinim.app.data.local.AppSettings
 import com.altinim.app.data.local.SettingsRepository
 import com.altinim.app.ui.AltinimApp
 import com.altinim.app.ui.theme.AltinimTheme
+import com.altinim.app.ui.theme.AntiqueBrass
 import com.altinim.app.ui.theme.InkFaded
 
 class MainActivity : FragmentActivity() {
@@ -50,6 +56,7 @@ private fun AppLockGate() {
     var settings by remember { mutableStateOf<AppSettings?>(null) }
     var authenticated by remember { mutableStateOf(false) }
     var promptShown by remember { mutableStateOf(false) }
+    var retryTrigger by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
         settingsRepository.settings.collect { newSettings ->
@@ -60,7 +67,7 @@ private fun AppLockGate() {
         }
     }
 
-    LaunchedEffect(settings, authenticated) {
+    LaunchedEffect(settings, authenticated, retryTrigger) {
         val currentSettings = settings
         val activity = context as? FragmentActivity
         if (currentSettings != null && currentSettings.appLockEnabled && !authenticated && !promptShown && activity != null) {
@@ -110,7 +117,15 @@ private fun AppLockGate() {
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = "Kilit açılması bekleniyor…", color = InkFaded)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Kilit açılması bekleniyor…", color = InkFaded)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "TEKRAR DENE",
+                    color = AntiqueBrass,
+                    modifier = Modifier.clickable { retryTrigger++ }
+                )
+            }
         }
     }
 }

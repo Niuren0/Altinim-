@@ -6,8 +6,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.net.Uri
 import android.os.Environment
+import android.provider.Settings
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -38,6 +39,21 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
 
     fun downloadAndInstall(downloadUrl: String, version: String) {
         val context = getApplication<Application>()
+
+        if (!context.packageManager.canRequestPackageInstalls()) {
+            Toast.makeText(
+                context,
+                "Güncellemeyi kurmak için \"Bilinmeyen kaynaklardan yükleme\" iznini açman gerekiyor.",
+                Toast.LENGTH_LONG
+            ).show()
+            val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                data = "package:${context.packageName}".toUri()
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(settingsIntent)
+            return
+        }
+
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 
         // Önceki indirme için hâlâ kayıtlı bir receiver varsa (ör. kullanıcı

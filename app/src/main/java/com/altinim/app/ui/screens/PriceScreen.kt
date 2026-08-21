@@ -34,6 +34,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.altinim.app.data.remote.GoldProduct
+import com.altinim.app.data.repository.PriceDirection
+import com.altinim.app.data.repository.PriceUiState
+import com.altinim.app.data.repository.ProductPriceChange
 import com.altinim.app.data.sortAndFilterGoldProducts
 import com.altinim.app.ui.theme.AntiqueBrass
 import com.altinim.app.ui.theme.BottleInk

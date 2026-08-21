@@ -6,37 +6,25 @@ import androidx.lifecycle.viewModelScope
 import com.altinim.app.data.local.AppSettings
 import com.altinim.app.data.local.SettingsRepository
 import com.altinim.app.data.remote.GoldProduct
-import com.altinim.app.data.remote.NetworkModule
-import com.altinim.app.data.repository.PriceRepository
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.altinim.app.data.repository.PriceStore
+import com.altinim.app.data.repository.PriceUiState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = SettingsRepository(application)
-    private val priceRepository = PriceRepository(NetworkModule.kurpanoApi)
+    private val priceStore = PriceStore.getInstance(application)
 
     val settings: StateFlow<AppSettings> = repository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
 
-    // Sıralama/gizleme listesini gösterebilmek için ürün adlarına
-    // ihtiyacımız var, bu yüzden burada da bir kere fiyat çekiyoruz.
-    private val _availableProducts = MutableStateFlow<List<GoldProduct>>(emptyList())
-    val availableProducts: StateFlow<List<GoldProduct>> = _availableProducts.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            try {
-                _availableProducts.value = priceRepository.fetchPrices()
-            } catch (e: Exception) {
-                android.util.Log.e("Settings", "Ürün listesi çekilemedi", e)
-            }
-        }
-    }
+    val availableProducts: StateFlow<List<GoldProduct>> = priceStore.uiState
+        .map { state -> (state as? PriceUiState.Success)?.products ?: emptyList() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun moveProduct(orderedNames: List<String>, fromIndex: Int, toIndex: Int) {
         viewModelScope.launch {

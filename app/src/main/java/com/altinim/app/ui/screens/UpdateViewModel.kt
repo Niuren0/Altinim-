@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.altinim.app.BuildConfig
+import com.altinim.app.data.ApkSignatureVerifier
 import com.altinim.app.data.repository.UpdateCheckResult
 import com.altinim.app.data.repository.UpdateRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
+import java.io.File
 
 class UpdateViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -56,9 +58,10 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
 
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 
-        // Önceki indirme için hâlâ kayıtlı bir receiver varsa (ör. kullanıcı
-        // güncellemeyi tekrar tetiklediyse) önce onu temizle.
         unregisterDownloadReceiver(context)
+
+        val apkFileName = "altinim-$version.apk"
+        val apkFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), apkFileName)
 
         val request = DownloadManager.Request(downloadUrl.toUri())
             .setTitle("Altınım $version")
@@ -67,7 +70,7 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
             .setDestinationInExternalFilesDir(
                 context,
                 Environment.DIRECTORY_DOWNLOADS,
-                "altinim-$version.apk"
+                apkFileName
             )
             .setMimeType("application/vnd.android.package-archive")
 
@@ -78,12 +81,21 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
                 val completedId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
                 if (completedId == downloadId) {
                     val uri = downloadManager.getUriForDownloadedFile(completedId)
-                    if (uri != null) {
+                    if (uri != null && apkFile.exists() &&
+                        ApkSignatureVerifier.matchesInstalledApp(context, apkFile)
+                    ) {
                         val installIntent = Intent(Intent.ACTION_VIEW).apply {
                             setDataAndType(uri, "application/vnd.android.package-archive")
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
                         }
                         context.startActivity(installIntent)
+                    } else {
+                        apkFile.delete()
+                        Toast.makeText(
+                            context,
+                            "İndirilen güncelleme doğrulanamadı, kurulum iptal edildi.",
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
                     unregisterDownloadReceiver(context)
                 }

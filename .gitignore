@@ -1,5 +1,23 @@
-# Project exclude paths
-/.gradle/
-/app/build/
-/app/build/intermediates/javac/debug/compileDebugJavaWithJavac/classes/
-/build/
+# Built application files
+*.apk
+*.aar
+*.aab
+
+# Gradle & Build outputs
+.gradle/
+build/
+app/build/
+app/release/
+
+# Local configuration
+local.properties
+
+# IDE specific (Android Studio / IntelliJ)
+.idea/
+*.iml
+.navigation/
+captures/
+
+# OS generated files
+.DS_Store
+Thumbs.db

@@ -138,5 +138,15 @@ class PriceStore private constructor(context: Context) {
                 INSTANCE ?: PriceStore(context.applicationContext).also { INSTANCE = it }
             }
         }
+
+        suspend fun getPricesForWidget(context: Context): List<GoldProduct> {
+            val cached = (INSTANCE?.uiState?.value as? PriceUiState.Success)?.products
+            if (cached != null) return cached
+            return try {
+                PriceRepository(NetworkModule.kurpanoApi).fetchPrices()
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
     }
 }

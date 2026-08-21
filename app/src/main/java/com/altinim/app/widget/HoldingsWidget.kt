@@ -24,16 +24,14 @@ import androidx.glance.text.TextStyle
 import com.altinim.app.MainActivity
 import com.altinim.app.data.computePortfolioSummary
 import com.altinim.app.data.local.AppDatabase
-import com.altinim.app.data.remote.NetworkModule
 import com.altinim.app.data.repository.GoldEntryRepository
-import com.altinim.app.data.repository.PriceRepository
+import com.altinim.app.data.repository.PriceStore
 import kotlinx.coroutines.flow.first
 
 class HoldingsWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entryRepository = GoldEntryRepository(AppDatabase.getInstance(context).goldEntryDao())
-        val priceRepository = PriceRepository(NetworkModule.kurpanoApi)
 
         val entries = try {
             entryRepository.getAllEntries().first()
@@ -41,11 +39,7 @@ class HoldingsWidget : GlanceAppWidget() {
             emptyList()
         }
 
-        val products = try {
-            priceRepository.fetchPrices()
-        } catch (e: Exception) {
-            emptyList()
-        }
+        val products = PriceStore.getPricesForWidget(context)
 
         val summary = computePortfolioSummary(entries, products)
         val profitColor = if (summary.profit >= 0) WidgetColors.BottleInk else WidgetColors.WaxSeal

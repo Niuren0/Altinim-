@@ -21,15 +21,13 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.altinim.app.MainActivity
 import com.altinim.app.data.local.SettingsRepository
-import com.altinim.app.data.remote.NetworkModule
-import com.altinim.app.data.repository.PriceRepository
+import com.altinim.app.data.repository.PriceStore
 import com.altinim.app.data.sortAndFilterGoldProducts
 import kotlinx.coroutines.flow.first
 
 class AltinimWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val priceRepository = PriceRepository(NetworkModule.kurpanoApi)
         val settingsRepository = SettingsRepository(context)
 
         val settings = try {
@@ -38,11 +36,7 @@ class AltinimWidget : GlanceAppWidget() {
             null
         }
 
-        val products = try {
-            priceRepository.fetchPrices()
-        } catch (e: Exception) {
-            emptyList()
-        }
+        val products = PriceStore.getPricesForWidget(context)
 
         val visibleProducts = if (settings != null) {
             sortAndFilterGoldProducts(products, settings.productOrder, settings.hiddenProducts)

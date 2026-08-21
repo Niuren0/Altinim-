@@ -19,15 +19,23 @@ fun computePortfolioSummary(
     val hasLivePrices = currentProducts.isNotEmpty()
     val totalInvested = entries.sumOf { it.amount * it.pricePerUnit }
     val currentValue = entries.sumOf { entry ->
-        val currentPrice = currentProducts
-            .find { it.ProductName == entry.productName }
-            ?.RoundPurchasePrice
-            ?.let { parseTurkishNumber(it) }
-            ?: entry.pricePerUnit
-        entry.amount * currentPrice
+        entry.amount * currentPriceFor(entry, currentProducts)
     }
     return PortfolioSummary(totalInvested, currentValue, hasLivePrices)
 }
 
 fun hasLivePriceFor(entry: GoldEntry, currentProducts: List<GoldProduct>): Boolean =
     currentProducts.any { it.ProductName == entry.productName }
+
+// Bir kaydın "şimdi satsan ne alırsın" değeri için kullanılan güncel birim
+// fiyatı. Kuyumcunun geri ALIŞ fiyatı (RoundPurchasePrice) esas alınıyor;
+// ürün artık API'de yoksa (isim değişmiş/kaldırılmış) veya fiyat
+// parse edilemiyorsa, kaydın alındığı andaki fiyata (pricePerUnit) düşülüyor.
+// Hem portföy özeti hem tekil kayıt satırları bu fonksiyonu kullanmalı ki
+// fiyatlama mantığı tek yerden değişsin.
+fun currentPriceFor(entry: GoldEntry, currentProducts: List<GoldProduct>): Double =
+    currentProducts
+        .find { it.ProductName == entry.productName }
+        ?.RoundPurchasePrice
+        ?.let { parseTurkishNumber(it) }
+        ?: entry.pricePerUnit

@@ -5,7 +5,8 @@ import com.altinim.app.data.remote.GoldProduct
 
 data class PortfolioSummary(
     val totalInvested: Double,
-    val currentValue: Double
+    val currentValue: Double,
+    val hasLivePrices: Boolean
 ) {
     val profit: Double get() = currentValue - totalInvested
     val profitPercent: Double get() = if (totalInvested > 0) (profit / totalInvested) * 100 else 0.0
@@ -15,6 +16,7 @@ fun computePortfolioSummary(
     entries: List<GoldEntry>,
     currentProducts: List<GoldProduct>
 ): PortfolioSummary {
+    val hasLivePrices = currentProducts.isNotEmpty()
     val totalInvested = entries.sumOf { it.amount * it.pricePerUnit }
     val currentValue = entries.sumOf { entry ->
         val currentPrice = currentProducts
@@ -24,5 +26,8 @@ fun computePortfolioSummary(
             ?: entry.pricePerUnit
         entry.amount * currentPrice
     }
-    return PortfolioSummary(totalInvested, currentValue)
+    return PortfolioSummary(totalInvested, currentValue, hasLivePrices)
 }
+
+fun hasLivePriceFor(entry: GoldEntry, currentProducts: List<GoldProduct>): Boolean =
+    currentProducts.any { it.ProductName == entry.productName }

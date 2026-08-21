@@ -75,6 +75,13 @@ class HoldingsWidget : GlanceAppWidget() {
                             color = fixedColor(WidgetColors.InkFaded)
                         )
                     )
+                } else if (!summary.hasLivePrices) {
+                    Text(
+                        text = "Fiyat verisi alınamadı",
+                        style = TextStyle(
+                            fontSize = 12.sp,
+                            color = fixedColor(WidgetColors.InkFaded))
+                    )
                 } else {
                     SummaryLine("Yatırılan", "${summary.totalInvested.toInt()} TL")
                     SummaryLine("Güncel", "${summary.currentValue.toInt()} TL")

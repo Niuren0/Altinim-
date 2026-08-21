@@ -44,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.altinim.app.data.local.GoldEntry
 import com.altinim.app.data.remote.GoldProduct
 import com.altinim.app.data.computePortfolioSummary
+import com.altinim.app.data.hasLivePriceFor
 import com.altinim.app.data.parseTurkishNumber
 import com.altinim.app.data.sortAndFilterProductNames
 import com.altinim.app.ui.theme.AntiqueBrass
@@ -64,9 +65,12 @@ fun HoldingsScreen(
 ) {
     val entries by viewModel.entries.collectAsState()
     val products by viewModel.currentProducts.collectAsState()
+    val pricesStale by viewModel.pricesStale.collectAsState()
     val settings by viewModel.settings.collectAsState()
+
     var entryPendingDelete by remember { mutableStateOf<GoldEntry?>(null) }
     var entryPendingEdit by remember { mutableStateOf<GoldEntry?>(null) }
+
     val productNamesForEdit = sortAndFilterProductNames(
         products.map { it.ProductName },
         settings.productOrder,
@@ -89,7 +93,7 @@ fun HoldingsScreen(
         )
         HorizontalDivider(color = HairlineRule, thickness = 2.dp)
         if (entries.isNotEmpty()) {
-            HoldingsSummary(entries = entries, currentProducts = products)
+            HoldingsSummary(entries = entries, currentProducts = products, pricesStale = pricesStale)
             HorizontalDivider(color = HairlineRule, thickness = 1.dp)
         }
         if (entries.isEmpty()) {
@@ -358,7 +362,11 @@ private fun EditEntryDialog(
 }
 
 @Composable
-private fun HoldingsSummary(entries: List<GoldEntry>, currentProducts: List<GoldProduct>) {
+private fun HoldingsSummary(
+    entries: List<GoldEntry>,
+    currentProducts: List<GoldProduct>,
+    pricesStale: Boolean
+) {
     val summary = computePortfolioSummary(entries, currentProducts)
     val profitColor = if (summary.profit >= 0) BottleInk else WaxSeal
     val sign = if (summary.profit >= 0) "+" else ""
@@ -380,6 +388,23 @@ private fun HoldingsSummary(entries: List<GoldEntry>, currentProducts: List<Gold
             style = MaterialTheme.typography.titleLarge,
             color = InkCharcoal
         )
+
+        if (!summary.hasLivePrices) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Güncel fiyatlar alınamadı — aşağıdaki değerler alış fiyatlarına dayanıyor.",
+                style = MaterialTheme.typography.bodySmall,
+                color = WaxSeal
+            )
+        } else if (pricesStale) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "Fiyatlar güncellenemedi, son bilinen değerler gösteriliyor.",
+                style = MaterialTheme.typography.bodySmall,
+                color = InkFaded
+            )
+        }
+
         Spacer(modifier = Modifier.height(10.dp))
         SummaryRow(label = "Toplam yatırılan", value = "${summary.totalInvested.toInt()} TL")
         SummaryRow(label = "Güncel değer", value = "${summary.currentValue.toInt()} TL")
@@ -647,6 +672,7 @@ private fun EntryRow(
     val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale("tr")) }
     val total = entry.amount * entry.pricePerUnit
 
+    val isLive = hasLivePriceFor(entry, currentProducts)
     val currentPrice = currentProducts
         .find { it.ProductName == entry.productName }
         ?.RoundPurchasePrice
@@ -691,8 +717,16 @@ private fun EntryRow(
             Text(
                 text = "$sign${profit.toInt()} TL (${String.format(Locale("tr"), "%.1f", profitPercent)}%)",
                 style = MaterialTheme.typography.bodyMedium,
-                color = profitColor
+                color = if (isLive) profitColor else InkFaded
             )
+            if (!isLive) {
+                Text(
+                    text = "fiyat güncel değil",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = InkFaded
+                )
+            }
+
             Row(modifier = Modifier.padding(top = 4.dp)) {
                 Text(
                     text = "DÜZENLE",

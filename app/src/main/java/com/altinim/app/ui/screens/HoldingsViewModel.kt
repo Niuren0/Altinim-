@@ -41,6 +41,9 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
     private val _currentProducts = MutableStateFlow<List<GoldProduct>>(emptyList())
     val currentProducts: StateFlow<List<GoldProduct>> = _currentProducts.asStateFlow()
 
+    private val _pricesStale = MutableStateFlow(false)
+    val pricesStale: StateFlow<Boolean> = _pricesStale.asStateFlow()
+
     private var priceRefreshJob: Job? = null
 
     init {
@@ -51,10 +54,6 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
                     startPeriodicPriceRefresh(intervalSeconds)
                 }
         }
-    }
-
-    fun loadCurrentPrices() {
-        viewModelScope.launch { fetchPricesOnce() }
     }
 
     private fun startPeriodicPriceRefresh(intervalSeconds: Int) {
@@ -70,8 +69,12 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
     private suspend fun fetchPricesOnce() {
         try {
             _currentProducts.value = priceRepository.fetchPrices()
+            _pricesStale.value = false
         } catch (e: Exception) {
             android.util.Log.e("Holdings", "Fiyatlar çekilemedi", e)
+            if (_currentProducts.value.isNotEmpty()) {
+                _pricesStale.value = true
+            }
         }
     }
 

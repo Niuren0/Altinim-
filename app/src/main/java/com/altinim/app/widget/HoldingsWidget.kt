@@ -21,7 +21,6 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.altinim.app.MainActivity
 import com.altinim.app.data.computePortfolioSummary
 import com.altinim.app.data.local.AppDatabase
@@ -49,14 +48,14 @@ class HoldingsWidget : GlanceAppWidget() {
         }
 
         val summary = computePortfolioSummary(entries, products)
-        val profitColor = if (summary.profit >= 0) Color(0xFF2F4B3C) else Color(0xFF7A2E2E)
+        val profitColor = if (summary.profit >= 0) WidgetColors.BottleInk else WidgetColors.WaxSeal
         val sign = if (summary.profit >= 0) "+" else ""
 
         provideContent {
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .background(Color(0xFFEFE3C0))
+                    .background(WidgetColors.Parchment)
                     .padding(12.dp)
                     .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
             ) {
@@ -65,7 +64,7 @@ class HoldingsWidget : GlanceAppWidget() {
                     style = TextStyle(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorProvider(Color(0xFF1C2B39))
+                        color = fixedColor(WidgetColors.LedgerCover)
                     )
                 )
                 if (entries.isEmpty()) {
@@ -73,7 +72,7 @@ class HoldingsWidget : GlanceAppWidget() {
                         text = "Henüz kayıt yok",
                         style = TextStyle(
                             fontSize = 12.sp,
-                            color = ColorProvider(Color(0xFF6B6152))
+                            color = fixedColor(WidgetColors.InkFaded)
                         )
                     )
                 } else {
@@ -90,7 +89,7 @@ class HoldingsWidget : GlanceAppWidget() {
 private fun SummaryLine(
     label: String,
     value: String,
-    valueColor: Color = Color(0xFF26211B)
+    valueColor: Color = WidgetColors.InkCharcoal
 ) {
     Row(
         modifier = GlanceModifier
@@ -100,14 +99,14 @@ private fun SummaryLine(
         Text(
             text = label,
             modifier = GlanceModifier.defaultWeight(),
-            style = TextStyle(fontSize = 12.sp, color = ColorProvider(Color(0xFF6B6152)))
+            style = TextStyle(fontSize = 12.sp, color = fixedColor(WidgetColors.InkFaded))
         )
         Text(
             text = value,
             style = TextStyle(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = ColorProvider(valueColor)
+                color = fixedColor(valueColor)
             )
         )
     }

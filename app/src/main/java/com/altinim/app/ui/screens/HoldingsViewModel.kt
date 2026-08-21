@@ -12,6 +12,7 @@ import com.altinim.app.data.remote.GoldProduct
 import com.altinim.app.data.remote.NetworkModule
 import com.altinim.app.data.repository.GoldEntryRepository
 import com.altinim.app.data.repository.PriceRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 class HoldingsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -39,6 +41,8 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
     private val _currentProducts = MutableStateFlow<List<GoldProduct>>(emptyList())
     val currentProducts: StateFlow<List<GoldProduct>> = _currentProducts.asStateFlow()
 
+    private var priceRefreshJob: Job? = null
+
     init {
         viewModelScope.launch {
             settings.map { it.refreshIntervalSeconds }
@@ -54,10 +58,11 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun startPeriodicPriceRefresh(intervalSeconds: Int) {
-        viewModelScope.launch {
+        priceRefreshJob?.cancel()
+        priceRefreshJob = viewModelScope.launch {
             while (true) {
                 fetchPricesOnce()
-                delay(intervalSeconds * 1000L)
+                delay((intervalSeconds * 1000L).milliseconds)
             }
         }
     }
@@ -106,5 +111,10 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
             entryRepository.deleteEntry(entry)
             com.altinim.app.widget.HoldingsWidget().updateAll(getApplication())
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        priceRefreshJob?.cancel()
     }
 }

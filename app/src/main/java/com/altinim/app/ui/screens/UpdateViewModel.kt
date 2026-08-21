@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.core.net.toUri
 
 class UpdateViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -25,6 +26,8 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _uiState = MutableStateFlow<UpdateCheckResult?>(null)
     val uiState: StateFlow<UpdateCheckResult?> = _uiState.asStateFlow()
+
+    private var downloadReceiver: BroadcastReceiver? = null
 
     fun checkForUpdate() {
         viewModelScope.launch {
@@ -37,7 +40,11 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
         val context = getApplication<Application>()
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 
-        val request = DownloadManager.Request(Uri.parse(downloadUrl))
+        // Önceki indirme için hâlâ kayıtlı bir receiver varsa (ör. kullanıcı
+        // güncellemeyi tekrar tetiklediyse) önce onu temizle.
+        unregisterDownloadReceiver(context)
+
+        val request = DownloadManager.Request(downloadUrl.toUri())
             .setTitle("Altınım $version")
             .setDescription("Güncelleme indiriliyor…")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
@@ -62,10 +69,11 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
                         }
                         context.startActivity(installIntent)
                     }
-                    context.unregisterReceiver(this)
+                    unregisterDownloadReceiver(context)
                 }
             }
         }
+        downloadReceiver = receiver
 
         ContextCompat.registerReceiver(
             context,
@@ -73,5 +81,17 @@ class UpdateViewModel(application: Application) : AndroidViewModel(application) 
             IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
             ContextCompat.RECEIVER_EXPORTED
         )
+    }
+
+    private fun unregisterDownloadReceiver(context: Context) {
+        downloadReceiver?.let {
+            runCatching { context.unregisterReceiver(it) }
+        }
+        downloadReceiver = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        unregisterDownloadReceiver(getApplication())
     }
 }

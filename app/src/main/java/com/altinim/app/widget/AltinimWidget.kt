@@ -2,7 +2,6 @@ package com.altinim.app.widget
 
 import android.content.Context
 import android.content.Intent
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -20,7 +19,6 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.altinim.app.MainActivity
 import com.altinim.app.data.local.SettingsRepository
 import com.altinim.app.data.remote.NetworkModule
@@ -56,7 +54,7 @@ class AltinimWidget : GlanceAppWidget() {
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .background(Color(0xFFEFE3C0))
+                    .background(WidgetColors.Parchment)
                     .padding(12.dp)
                     .clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
             ) {
@@ -65,7 +63,7 @@ class AltinimWidget : GlanceAppWidget() {
                     style = TextStyle(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = ColorProvider(Color(0xFF1C2B39))
+                        color = fixedColor(WidgetColors.LedgerCover)
                     )
                 )
                 if (visibleProducts.isEmpty()) {
@@ -73,7 +71,7 @@ class AltinimWidget : GlanceAppWidget() {
                         text = "Fiyatlar alınamadı",
                         style = TextStyle(
                             fontSize = 12.sp,
-                            color = ColorProvider(Color(0xFF6B6152))
+                            color = fixedColor(WidgetColors.InkFaded)
                         )
                     )
                 } else {
@@ -88,7 +86,7 @@ class AltinimWidget : GlanceAppWidget() {
                                 modifier = GlanceModifier.defaultWeight(),
                                 style = TextStyle(
                                     fontSize = 12.sp,
-                                    color = ColorProvider(Color(0xFF26211B))
+                                    color = fixedColor(WidgetColors.InkCharcoal)
                                 )
                             )
                             Text(
@@ -96,7 +94,7 @@ class AltinimWidget : GlanceAppWidget() {
                                 style = TextStyle(
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = ColorProvider(Color(0xFF7A2E2E))
+                                    color = fixedColor(WidgetColors.WaxSeal)
                                 )
                             )
                         }

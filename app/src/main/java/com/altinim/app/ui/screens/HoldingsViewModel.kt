@@ -12,6 +12,7 @@ import com.altinim.app.data.repository.PriceUiState
 import com.altinim.app.widget.HoldingsWidget
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,6 +26,12 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
 
     val entries: StateFlow<List<GoldEntry>> = entryRepository.getAllEntries()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        viewModelScope.launch {
+            entries.drop(1).collect { notifyWidget() }
+        }
+    }
 
     val settings: StateFlow<AppSettings> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
@@ -46,7 +53,6 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
                     dateMillis = dateMillis
                 )
             )
-            notifyWidget()
         }
     }
 
@@ -62,14 +68,12 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
                     dateMillis = dateMillis
                 )
             )
-            notifyWidget()
         }
     }
 
     fun deleteEntry(entry: GoldEntry) {
         viewModelScope.launch {
             entryRepository.deleteEntry(entry)
-            notifyWidget()
         }
     }
 

@@ -26,6 +26,10 @@ import kotlinx.coroutines.flow.first
 
 class AltinimWidget : GlanceAppWidget() {
 
+    companion object {
+        private const val MAX_WIDGET_ROWS = 17
+    }
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val container = (context.applicationContext as AltinimApplication).container
 
@@ -41,7 +45,7 @@ class AltinimWidget : GlanceAppWidget() {
             sortAndFilterGoldProducts(products, settings.productOrder, settings.hiddenProducts)
         } else {
             products
-        }.take(17)
+        }.take(MAX_WIDGET_ROWS)
 
         provideContent {
             Column(
@@ -75,7 +79,7 @@ class AltinimWidget : GlanceAppWidget() {
                                 .padding(vertical = 2.dp)
                         ) {
                             Text(
-                                text = product.ProductName,
+                                text = product.productName,
                                 modifier = GlanceModifier.defaultWeight(),
                                 style = TextStyle(
                                     fontSize = 12.sp,
@@ -83,7 +87,7 @@ class AltinimWidget : GlanceAppWidget() {
                                 )
                             )
                             Text(
-                                text = "${product.RoundSalesPrice} TL",
+                                text = "${product.roundSalesPrice} TL",
                                 style = TextStyle(
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,

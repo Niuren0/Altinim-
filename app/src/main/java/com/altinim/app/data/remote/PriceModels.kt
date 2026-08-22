@@ -1,18 +1,15 @@
 package com.altinim.app.data.remote
 
-// kurpano.com/CustomHome/GetCurrentCompanyProductPrice cevabının şekli.
-// Alan adları API'nin döndüğü isimlerle birebir aynı (Gson eşlemesi için).
+import com.google.gson.annotations.SerializedName
 
 data class GoldProduct(
-    val Id: Int,
-    val ProductName: String,
-    val RoundPurchasePrice: String,
-    val RoundSalesPrice: String,
-    val TableId: Int,
-    val TableSort: Int
+    @SerializedName("Id") val id: Int,
+    @SerializedName("ProductName") val productName: String,
+    @SerializedName("RoundPurchasePrice") val roundPurchasePrice: String,
+    @SerializedName("RoundSalesPrice") val roundSalesPrice: String
 )
 
 data class PriceApiResponse(
-    val Value: List<GoldProduct>,
-    val Status: Boolean
+    @SerializedName("Value") val value: List<GoldProduct>,
+    @SerializedName("Status") val status: Boolean
 )

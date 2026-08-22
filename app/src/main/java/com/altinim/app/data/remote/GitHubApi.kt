@@ -1,16 +1,16 @@
 package com.altinim.app.data.remote
 
+import com.google.gson.annotations.SerializedName
 import retrofit2.http.GET
 
 data class GitHubRelease(
-    val tag_name: String,
-    val html_url: String,
+    @SerializedName("tag_name") val tagName: String,
     val assets: List<GitHubAsset>
 )
 
 data class GitHubAsset(
     val name: String,
-    val browser_download_url: String
+    @SerializedName("browser_download_url") val browserDownloadUrl: String
 )
 
 interface GitHubApi {

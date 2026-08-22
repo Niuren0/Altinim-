@@ -185,8 +185,8 @@ private fun PriceLedger(products: List<GoldProduct>, changes: Map<Int, ProductPr
     LazyColumn(
         contentPadding = PaddingValues(vertical = 8.dp)
     ) {
-        items(products, key = { it.Id }) { product ->
-            LedgerRow(product = product, change = changes[product.Id])
+        items(products, key = { it.id }) { product ->
+            LedgerRow(product = product, change = changes[product.id])
             HorizontalDivider(color = HairlineRule, thickness = 1.dp)
         }
     }
@@ -200,10 +200,10 @@ private fun LedgerRow(product: GoldProduct, change: ProductPriceChange?) {
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        HallmarkBadge(label = stampLabel(product.ProductName))
+        HallmarkBadge(label = stampLabel(product.productName))
         Spacer(modifier = Modifier.width(14.dp))
         Text(
-            text = product.ProductName,
+            text = product.productName,
             style = MaterialTheme.typography.titleMedium,
             color = InkCharcoal,
             modifier = Modifier.weight(1f)
@@ -211,14 +211,14 @@ private fun LedgerRow(product: GoldProduct, change: ProductPriceChange?) {
         Column(horizontalAlignment = Alignment.End) {
             PriceLine(
                 label = "ALIŞ",
-                value = product.RoundPurchasePrice,
+                value = product.roundPurchasePrice,
                 color = BottleInk,
                 direction = change?.purchaseDirection
             )
             Spacer(modifier = Modifier.height(2.dp))
             PriceLine(
                 label = "SATIŞ",
-                value = product.RoundSalesPrice,
+                value = product.roundSalesPrice,
                 color = WaxSeal,
                 direction = change?.salesDirection
             )

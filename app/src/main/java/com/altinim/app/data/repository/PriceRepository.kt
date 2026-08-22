@@ -9,9 +9,9 @@ class PriceRepository(
 ) {
     suspend fun fetchPrices(): List<GoldProduct> {
         val response = api.getPrices()
-        if (!response.Status) {
+        if (!response.status) {
             throw IOException("Fiyat servisi geçerli veri döndürmedi (Status=false).")
         }
-        return response.Value
+        return response.value
     }
 }

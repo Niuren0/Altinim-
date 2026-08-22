@@ -64,10 +64,9 @@ fun SettingsScreen(
     var showPinDialog by remember { mutableStateOf(false) }
 
     val orderedNames = remember(availableProducts, settings.productOrder) {
-        orderProductNames(availableProducts.map { it.ProductName }, settings.productOrder)
+        orderProductNames(availableProducts.map { it.productName }, settings.productOrder)
     }
 
-    // Ekran her açıldığında elle butona basmadan otomatik kontrol et.
     LaunchedEffect(Unit) {
         updateViewModel.checkForUpdate()
     }

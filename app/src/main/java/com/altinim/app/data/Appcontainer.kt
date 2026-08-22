@@ -3,7 +3,9 @@ package com.altinim.app.data
 import android.content.Context
 import com.altinim.app.data.local.AppDatabase
 import com.altinim.app.data.local.SettingsRepository
+import com.altinim.app.data.remote.NetworkModule
 import com.altinim.app.data.repository.GoldEntryRepository
+import com.altinim.app.data.repository.PriceRepository
 import com.altinim.app.data.repository.PriceStore
 
 class AppContainer(context: Context) {
@@ -19,6 +21,6 @@ class AppContainer(context: Context) {
     }
 
     val priceStore: PriceStore by lazy {
-        PriceStore.getInstance(appContext)
+        PriceStore(PriceRepository(NetworkModule.kurpanoApi), settingsRepository)
     }
 }

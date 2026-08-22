@@ -85,12 +85,12 @@ fun HoldingsScreen(
     var entryPendingEdit by remember { mutableStateOf<GoldEntry?>(null) }
 
     val productNamesForEdit = sortAndFilterProductNames(
-        products.map { it.ProductName },
+        products.map { it.productName },
         settings.productOrder,
         settings.hiddenProducts
     )
     val onProductSelected: (String) -> String? = { name ->
-        products.find { it.ProductName == name }?.RoundSalesPrice
+        products.find { it.productName == name }?.roundSalesPrice
     }
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {

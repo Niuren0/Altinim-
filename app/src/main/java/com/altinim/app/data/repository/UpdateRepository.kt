@@ -18,8 +18,8 @@ class UpdateRepository {
             val apkAsset = release.assets.find { it.name.endsWith(".apk") }
             when {
                 apkAsset == null -> UpdateCheckResult.Error("Son sürümde APK dosyası bulunamadı.")
-                isNewerVersion(release.tag_name, currentVersion) ->
-                    UpdateCheckResult.UpdateAvailable(release.tag_name, apkAsset.browser_download_url)
+                isNewerVersion(release.tagName, currentVersion) ->
+                    UpdateCheckResult.UpdateAvailable(release.tagName, apkAsset.browserDownloadUrl)
                 else -> UpdateCheckResult.UpToDate
             }
         } catch (e: CancellationException) {

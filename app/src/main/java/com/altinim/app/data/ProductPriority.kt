@@ -37,7 +37,7 @@ fun sortAndFilterGoldProducts(
     customOrder: List<String>,
     hidden: Set<String>
 ): List<GoldProduct> {
-    val orderedNames = orderProductNames(products.map { it.ProductName }, customOrder)
-    val byName = products.associateBy { it.ProductName }
-    return orderedNames.mapNotNull { byName[it] }.filterNot { it.ProductName in hidden }
+    val orderedNames = orderProductNames(products.map { it.productName }, customOrder)
+    val byName = products.associateBy { it.productName }
+    return orderedNames.mapNotNull { byName[it] }.filterNot { it.productName in hidden }
 }

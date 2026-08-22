@@ -1,10 +1,8 @@
 package com.altinim.app.data.repository
 
-import android.content.Context
 import com.altinim.app.data.local.SettingsRepository
 import com.altinim.app.data.parseTurkishNumber
 import com.altinim.app.data.remote.GoldProduct
-import com.altinim.app.data.remote.NetworkModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,11 +36,12 @@ sealed interface PriceUiState {
 // Ayarlar ekranları kurpano.com'a birbirinden bağımsız istek atıyordu
 // (Fiyatlar + Birikimim sürekli polling, Ayarlar tek seferlik) — artık
 // tek bir polling döngüsü var, hepsi bu döngünün sonucuna abone oluyor.
-class PriceStore private constructor(context: Context) {
+class PriceStore(
+    private val repository: PriceRepository,
+    private val settingsRepository: SettingsRepository
+) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private val repository = PriceRepository(NetworkModule.kurpanoApi)
-    private val settingsRepository = SettingsRepository(context)
 
     private val _uiState = MutableStateFlow<PriceUiState>(PriceUiState.Loading)
     val uiState: StateFlow<PriceUiState> = _uiState.asStateFlow()
@@ -106,18 +105,18 @@ class PriceStore private constructor(context: Context) {
         new: List<GoldProduct>
     ): Map<Int, ProductPriceChange> {
         if (old == null) return emptyMap()
-        val oldById = old.associateBy { it.Id }
+        val oldById = old.associateBy { it.id }
         return new.mapNotNull { newProduct ->
-            val oldProduct = oldById[newProduct.Id] ?: return@mapNotNull null
+            val oldProduct = oldById[newProduct.id] ?: return@mapNotNull null
             val purchaseDirection = directionOf(
-                parseTurkishNumber(oldProduct.RoundPurchasePrice),
-                parseTurkishNumber(newProduct.RoundPurchasePrice)
+                parseTurkishNumber(oldProduct.roundPurchasePrice),
+                parseTurkishNumber(newProduct.roundPurchasePrice)
             )
             val salesDirection = directionOf(
-                parseTurkishNumber(oldProduct.RoundSalesPrice),
-                parseTurkishNumber(newProduct.RoundSalesPrice)
+                parseTurkishNumber(oldProduct.roundSalesPrice),
+                parseTurkishNumber(newProduct.roundSalesPrice)
             )
-            newProduct.Id to ProductPriceChange(purchaseDirection, salesDirection)
+            newProduct.id to ProductPriceChange(purchaseDirection, salesDirection)
         }.toMap()
     }
 
@@ -136,16 +135,6 @@ class PriceStore private constructor(context: Context) {
             repository.fetchPrices()
         } catch (e: Exception) {
             emptyList()
-        }
-    }
-
-    companion object {
-        @Volatile private var INSTANCE: PriceStore? = null
-
-        fun getInstance(context: Context): PriceStore {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: PriceStore(context.applicationContext).also { INSTANCE = it }
-            }
         }
     }
 }

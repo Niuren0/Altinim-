@@ -25,7 +25,7 @@ fun computePortfolioSummary(
 }
 
 fun hasLivePriceFor(entry: GoldEntry, currentProducts: List<GoldProduct>): Boolean =
-    currentProducts.any { it.ProductName == entry.productName }
+    currentProducts.any { it.productName == entry.productName }
 
 // Bir kaydın "şimdi satsan ne alırsın" değeri için kullanılan güncel birim
 // fiyatı. Kuyumcunun geri ALIŞ fiyatı (RoundPurchasePrice) esas alınıyor;
@@ -35,7 +35,7 @@ fun hasLivePriceFor(entry: GoldEntry, currentProducts: List<GoldProduct>): Boole
 // fiyatlama mantığı tek yerden değişsin.
 fun currentPriceFor(entry: GoldEntry, currentProducts: List<GoldProduct>): Double =
     currentProducts
-        .find { it.ProductName == entry.productName }
-        ?.RoundPurchasePrice
+        .find { it.productName == entry.productName }
+        ?.roundPurchasePrice
         ?.let { parseTurkishNumber(it) }
         ?: entry.pricePerUnit

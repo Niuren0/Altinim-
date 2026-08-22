@@ -6,11 +6,14 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.glance.appwidget.updateAll
 import com.altinim.app.widget.AltinimWidget
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.security.MessageDigest
 import java.security.SecureRandom
 
@@ -54,16 +57,22 @@ private fun hashPin(pin: String, saltBase64: String): String {
 
 class SettingsRepository(private val context: Context) {
 
-    private val orderKey = stringPreferencesKey("product_order")
-    private val hiddenKey = stringPreferencesKey("hidden_products")
+    private val legacyOrderKey = stringPreferencesKey("product_order")
+    private val legacyHiddenKey = stringPreferencesKey("hidden_products")
+
+    private val orderKey = stringPreferencesKey("product_order_json")
+    private val hiddenKey = stringSetPreferencesKey("hidden_products_set")
     private val intervalKey = intPreferencesKey("refresh_interval_seconds")
     private val lockKey = booleanPreferencesKey("app_lock_enabled")
     private val pinHashKey = stringPreferencesKey("app_lock_pin_hash")
     private val pinSaltKey = stringPreferencesKey("app_lock_pin_salt")
 
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { prefs ->
-        val order = prefs[orderKey]?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
-        val hidden = prefs[hiddenKey]?.split("|")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
+        val order = prefs[orderKey]?.let { json ->
+            runCatching { Json.decodeFromString<List<String>>(json) }.getOrNull()
+        } ?: legacyPipeSplit(prefs[legacyOrderKey])
+        val hidden = prefs[hiddenKey]
+            ?: legacyPipeSplit(prefs[legacyHiddenKey]).toSet()
         val interval = prefs[intervalKey] ?: AppSettings.MIN_REFRESH_INTERVAL_SECONDS
         val lockEnabled = prefs[lockKey] ?: false
         AppSettings(
@@ -76,16 +85,21 @@ class SettingsRepository(private val context: Context) {
         )
     }
 
+    private fun legacyPipeSplit(value: String?): List<String> =
+        value?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
+
     suspend fun updateProductOrder(order: List<String>) {
         context.settingsDataStore.edit { prefs ->
-            prefs[orderKey] = order.joinToString("|")
+            prefs[orderKey] = Json.encodeToString(order)
+            prefs.remove(legacyOrderKey)
         }
         AltinimWidget().updateAll(context)
     }
 
     suspend fun updateHiddenProducts(hidden: Set<String>) {
         context.settingsDataStore.edit { prefs ->
-            prefs[hiddenKey] = hidden.joinToString("|")
+            prefs[hiddenKey] = hidden
+            prefs.remove(legacyHiddenKey)
         }
         AltinimWidget().updateAll(context)
     }

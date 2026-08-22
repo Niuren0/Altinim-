@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.altinim.app.data.local.AppSettings
-import com.altinim.app.data.local.SettingsRepository
 import com.altinim.app.data.local.verifyAppLockPin
 import com.altinim.app.ui.AltinimApp
 import com.altinim.app.ui.theme.AltinimTheme
@@ -61,7 +60,9 @@ class MainActivity : FragmentActivity() {
 @Composable
 private fun AppLockGate() {
     val context = LocalContext.current
-    val settingsRepository = remember { SettingsRepository(context) }
+    val settingsRepository = remember {
+        (context.applicationContext as AltinimApplication).container.settingsRepository
+    }
 
     var settings by remember { mutableStateOf<AppSettings?>(null) }
     var authenticated by remember { mutableStateOf(false) }

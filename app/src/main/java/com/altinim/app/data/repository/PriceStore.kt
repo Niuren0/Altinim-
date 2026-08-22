@@ -5,7 +5,6 @@ import com.altinim.app.data.local.SettingsRepository
 import com.altinim.app.data.parseTurkishNumber
 import com.altinim.app.data.remote.GoldProduct
 import com.altinim.app.data.remote.NetworkModule
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -92,8 +91,6 @@ class PriceStore private constructor(context: Context) {
             lastProducts = newProducts
             _uiState.value = PriceUiState.Success(newProducts, changes)
             _stale.value = false
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
             _stale.value = lastProducts != null
             if (forceLoading || _uiState.value !is PriceUiState.Success) {
@@ -133,22 +130,21 @@ class PriceStore private constructor(context: Context) {
         }
     }
 
+    suspend fun currentOrFetchOnce(): List<GoldProduct> {
+        (uiState.value as? PriceUiState.Success)?.let { return it.products }
+        return try {
+            repository.fetchPrices()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     companion object {
         @Volatile private var INSTANCE: PriceStore? = null
 
         fun getInstance(context: Context): PriceStore {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: PriceStore(context.applicationContext).also { INSTANCE = it }
-            }
-        }
-
-        suspend fun getPricesForWidget(context: Context): List<GoldProduct> {
-            val cached = (INSTANCE?.uiState?.value as? PriceUiState.Success)?.products
-            if (cached != null) return cached
-            return try {
-                PriceRepository(NetworkModule.kurpanoApi).fetchPrices()
-            } catch (e: Exception) {
-                emptyList()
             }
         }
     }

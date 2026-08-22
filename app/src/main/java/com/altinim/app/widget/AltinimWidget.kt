@@ -19,27 +19,23 @@ import androidx.glance.layout.padding
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.altinim.app.AltinimApplication
 import com.altinim.app.MainActivity
-import com.altinim.app.data.local.SettingsRepository
-import com.altinim.app.data.repository.PriceStore
 import com.altinim.app.data.sortAndFilterGoldProducts
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 class AltinimWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val settingsRepository = SettingsRepository(context)
+        val container = (context.applicationContext as AltinimApplication).container
 
         val settings = try {
-            settingsRepository.settings.first()
-        } catch (e: CancellationException) {
-            throw e
+            container.settingsRepository.settings.first()
         } catch (e: Exception) {
             null
         }
 
-        val products = PriceStore.getPricesForWidget(context)
+        val products = container.priceStore.currentOrFetchOnce()
 
         val visibleProducts = if (settings != null) {
             sortAndFilterGoldProducts(products, settings.productOrder, settings.hiddenProducts)

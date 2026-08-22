@@ -3,10 +3,9 @@ package com.altinim.app.ui.screens
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.altinim.app.AltinimApplication
 import com.altinim.app.data.local.AppSettings
-import com.altinim.app.data.local.SettingsRepository
 import com.altinim.app.data.remote.GoldProduct
-import com.altinim.app.data.repository.PriceStore
 import com.altinim.app.data.repository.PriceUiState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,8 +15,9 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = SettingsRepository(application)
-    private val priceStore = PriceStore.getInstance(application)
+    private val container = (application as AltinimApplication).container
+    private val repository = container.settingsRepository
+    private val priceStore = container.priceStore
 
     val settings: StateFlow<AppSettings> = repository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())

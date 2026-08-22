@@ -4,14 +4,12 @@ import android.app.Application
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.altinim.app.data.local.AppDatabase
+import com.altinim.app.AltinimApplication
 import com.altinim.app.data.local.AppSettings
 import com.altinim.app.data.local.GoldEntry
-import com.altinim.app.data.local.SettingsRepository
 import com.altinim.app.data.remote.GoldProduct
-import com.altinim.app.data.repository.GoldEntryRepository
-import com.altinim.app.data.repository.PriceStore
 import com.altinim.app.data.repository.PriceUiState
+import com.altinim.app.widget.HoldingsWidget
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -20,11 +18,10 @@ import kotlinx.coroutines.launch
 
 class HoldingsViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val entryRepository = GoldEntryRepository(
-        AppDatabase.getInstance(application).goldEntryDao()
-    )
-    private val priceStore = PriceStore.getInstance(application)
-    private val settingsRepository = SettingsRepository(application)
+    private val container = (application as AltinimApplication).container
+    private val entryRepository = container.goldEntryRepository
+    private val priceStore = container.priceStore
+    private val settingsRepository = container.settingsRepository
 
     val entries: StateFlow<List<GoldEntry>> = entryRepository.getAllEntries()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -49,7 +46,7 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
                     dateMillis = dateMillis
                 )
             )
-            com.altinim.app.widget.HoldingsWidget().updateAll(getApplication())
+            notifyWidget()
         }
     }
 
@@ -65,14 +62,18 @@ class HoldingsViewModel(application: Application) : AndroidViewModel(application
                     dateMillis = dateMillis
                 )
             )
-            com.altinim.app.widget.HoldingsWidget().updateAll(getApplication())
+            notifyWidget()
         }
     }
 
     fun deleteEntry(entry: GoldEntry) {
         viewModelScope.launch {
             entryRepository.deleteEntry(entry)
-            com.altinim.app.widget.HoldingsWidget().updateAll(getApplication())
+            notifyWidget()
         }
+    }
+
+    private suspend fun notifyWidget() {
+        HoldingsWidget().updateAll(getApplication())
     }
 }

@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,10 +28,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altinim.app.data.repository.UpdateCheckResult
 import com.altinim.app.ui.screens.HoldingsScreen
 import com.altinim.app.ui.screens.PriceScreen
 import com.altinim.app.ui.screens.SettingsScreen
+import com.altinim.app.ui.screens.UpdateViewModel
 import com.altinim.app.ui.theme.AntiqueBrass
+import com.altinim.app.ui.theme.InkCharcoal
+import com.altinim.app.ui.theme.InkFaded
 import com.altinim.app.ui.theme.LedgerCover
 import com.altinim.app.ui.theme.ParchmentLight
 
@@ -40,7 +45,7 @@ private enum class AltinimTab { Prices, Holdings, Settings }
 @Composable
 fun AltinimApp() {
     var currentTab by rememberSaveable { mutableStateOf(AltinimTab.Prices) }
-    val updateViewModel: com.altinim.app.ui.screens.UpdateViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val updateViewModel: UpdateViewModel = viewModel()
     val updateState by updateViewModel.uiState.collectAsState()
     var showUpdateDialog by remember { mutableStateOf(false) }
 
@@ -50,7 +55,7 @@ fun AltinimApp() {
     }
 
     LaunchedEffect(updateState) {
-        if (updateState is com.altinim.app.data.repository.UpdateCheckResult.UpdateAvailable) {
+        if (updateState is UpdateCheckResult.UpdateAvailable) {
             showUpdateDialog = true
         }
     }
@@ -69,7 +74,7 @@ fun AltinimApp() {
         )
     }
 
-    val availableUpdate = updateState as? com.altinim.app.data.repository.UpdateCheckResult.UpdateAvailable
+    val availableUpdate = updateState as? UpdateCheckResult.UpdateAvailable
     if (showUpdateDialog && availableUpdate != null) {
         UpdateAvailableDialog(
             version = availableUpdate.version,
@@ -88,11 +93,11 @@ private fun UpdateAvailableDialog(
     onDownload: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = com.altinim.app.ui.theme.ParchmentLight,
-        titleContentColor = com.altinim.app.ui.theme.InkCharcoal,
-        textContentColor = com.altinim.app.ui.theme.InkFaded,
+        containerColor = ParchmentLight,
+        titleContentColor = InkCharcoal,
+        textContentColor = InkFaded,
         title = {
             Text(text = "Yeni sürüm var", style = MaterialTheme.typography.titleLarge)
         },
@@ -112,7 +117,7 @@ private fun UpdateAvailableDialog(
         dismissButton = {
             Text(
                 text = "DAHA SONRA",
-                color = com.altinim.app.ui.theme.InkFaded,
+                color = InkFaded,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier
                     .clickable(onClick = onDismiss)
@@ -136,8 +141,6 @@ private fun LedgerTabBar(selected: AltinimTab, onSelect: (AltinimTab) -> Unit) {
                 selected = selected == AltinimTab.Holdings,
                 modifier = Modifier.weight(1f)
             ) { onSelect(AltinimTab.Holdings) }
-            // Ayarlar eşit genişlikte bir sekme değil, sağ kenarda küçük
-            // bir simge — iki ana bölümü kalabalıklaştırmasın diye.
             SettingsIconButton(
                 selected = selected == AltinimTab.Settings,
                 onClick = { onSelect(AltinimTab.Settings) }

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.padding
@@ -60,13 +62,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-// Ekle/Düzenle formları ve kayıt satırı aynı tarih formatını kullanıyor —
-// üç ayrı yerde remember { SimpleDateFormat(...) } oluşturmak yerine tek
-// paylaşılan bir biçimlendirici.
 private val entryDateFormat = SimpleDateFormat("dd.MM.yyyy", Locale("tr"))
 
-// AddEntryForm ve EditEntryDialog'un ikisi de aynı "0'dan büyük olmalı"
-// kurallarını uyguluyordu — ortak doğrulama burada.
 private fun validateEntry(productName: String, amount: Double?, price: Double?): String? = when {
     productName.isBlank() -> "Önce bir ürün seç."
     amount == null || amount <= 0 -> "Geçerli bir miktar gir (0'dan büyük)."
@@ -96,48 +93,50 @@ fun HoldingsScreen(
         products.find { it.ProductName == name }?.RoundSalesPrice
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
-        AddEntryForm(
-            productNames = productNamesForEdit,
-            onProductSelected = onProductSelected,
-            onSave = { productName, amount, unit, pricePerUnit, dateMillis ->
-                viewModel.addEntry(productName, amount, unit, pricePerUnit, dateMillis)
-            }
-        )
-        HorizontalDivider(color = HairlineRule, thickness = 2.dp)
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item {
+            AddEntryForm(
+                productNames = productNamesForEdit,
+                onProductSelected = onProductSelected,
+                onSave = { productName, amount, unit, pricePerUnit, dateMillis ->
+                    viewModel.addEntry(productName, amount, unit, pricePerUnit, dateMillis)
+                }
+            )
+            HorizontalDivider(color = HairlineRule, thickness = 2.dp)
+        }
         if (entries.isNotEmpty()) {
-            HoldingsSummary(entries = entries, currentProducts = products, pricesStale = pricesStale)
-            HorizontalDivider(color = HairlineRule, thickness = 1.dp)
+            item {
+                HoldingsSummary(entries = entries, currentProducts = products, pricesStale = pricesStale)
+                HorizontalDivider(color = HairlineRule, thickness = 1.dp)
+            }
         }
         if (entries.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Henüz kayıt yok. Yukarıdan ilk altınını ekle.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = InkFaded
-                )
-            }
-        } else {
-            Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                entries.forEach { entry ->
-                    EntryRow(
-                        entry = entry,
-                        currentProducts = products,
-                        onEdit = { entryPendingEdit = entry },
-                        onDelete = { entryPendingDelete = entry }
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Henüz kayıt yok. Yukarıdan ilk altınını ekle.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = InkFaded
                     )
-                    HorizontalDivider(color = HairlineRule, thickness = 1.dp)
                 }
             }
+        } else {
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+            items(entries, key = { it.id }) { entry ->
+                EntryRow(
+                    entry = entry,
+                    currentProducts = products,
+                    onEdit = { entryPendingEdit = entry },
+                    onDelete = { entryPendingDelete = entry }
+                )
+                HorizontalDivider(color = HairlineRule, thickness = 1.dp)
+            }
+            item { Spacer(modifier = Modifier.height(8.dp)) }
         }
     }
 
@@ -156,7 +155,6 @@ fun HoldingsScreen(
         EditEntryDialog(
             entry = entry,
             productNames = productNamesForEdit,
-            onProductSelected = onProductSelected,
             onSave = { productName, amount, unit, pricePerUnit, dateMillis ->
                 viewModel.updateEntry(entry.id, productName, amount, unit, pricePerUnit, dateMillis)
                 entryPendingEdit = null
@@ -210,10 +208,106 @@ private fun DeleteConfirmationDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun EntryFormFields(
+    productNames: List<String>,
+    productLabel: String,
+    productExpanded: Boolean,
+    onProductExpandedChange: (Boolean) -> Unit,
+    selectedProduct: String,
+    onProductChosen: (String) -> Unit,
+    amountText: String,
+    onAmountChange: (String) -> Unit,
+    priceText: String,
+    onPriceChange: (String) -> Unit,
+    unit: String,
+    dateMillis: Long,
+    onDateRowClick: () -> Unit
+) {
+    ExposedDropdownMenuBox(
+        expanded = productExpanded,
+        onExpandedChange = onProductExpandedChange
+    ) {
+        OutlinedTextField(
+            value = selectedProduct,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(productLabel) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = productExpanded) },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = AntiqueBrass,
+                unfocusedBorderColor = HairlineRule
+            )
+        )
+        DropdownMenu(
+            expanded = productExpanded,
+            onDismissRequest = { onProductExpandedChange(false) }
+        ) {
+            productNames.forEach { name ->
+                DropdownMenuItem(
+                    text = { Text(name) },
+                    onClick = {
+                        onProductExpandedChange(false)
+                        onProductChosen(name)
+                    }
+                )
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    OutlinedTextField(
+        value = amountText,
+        onValueChange = onAmountChange,
+        label = { Text(if (unit == "gram") "Gram" else "Adet") },
+        modifier = Modifier.fillMaxWidth(),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = AntiqueBrass,
+            unfocusedBorderColor = HairlineRule
+        )
+    )
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    OutlinedTextField(
+        value = priceText,
+        onValueChange = onPriceChange,
+        label = { Text("Birim alış fiyatı (TL)") },
+        modifier = Modifier.fillMaxWidth(),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = AntiqueBrass,
+            unfocusedBorderColor = HairlineRule
+        )
+    )
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onDateRowClick)
+            .border(BorderStroke(1.dp, HairlineRule))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = "Tarih: ", style = MaterialTheme.typography.bodyMedium, color = InkFaded)
+        Text(
+            text = entryDateFormat.format(dateMillis),
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkCharcoal,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun EditEntryDialog(
     entry: GoldEntry,
     productNames: List<String>,
-    onProductSelected: (String) -> String?,
     onSave: (productName: String, amount: Double, unit: String, pricePerUnit: Double, dateMillis: Long) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -237,98 +331,37 @@ private fun EditEntryDialog(
         },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                ExposedDropdownMenuBox(
-                    expanded = productExpanded,
-                    onExpandedChange = { productExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = selectedProduct,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Ürün") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = productExpanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AntiqueBrass,
-                            unfocusedBorderColor = HairlineRule
-                        )
-                    )
-                    DropdownMenu(
-                        expanded = productExpanded,
-                        onDismissRequest = { productExpanded = false }
-                    ) {
-                        productNames.forEach { name ->
-                            DropdownMenuItem(
-                                text = { Text(name) },
-                                onClick = {
-                                    selectedProduct = name
-                                    productExpanded = false
-                                    unit = detectUnit(name)
-                                }
-                            )
-                        }
+                EntryFormFields(
+                    productNames = productNames,
+                    productLabel = "Ürün",
+                    productExpanded = productExpanded,
+                    onProductExpandedChange = { productExpanded = it },
+                    selectedProduct = selectedProduct,
+                    onProductChosen = { name ->
+                        selectedProduct = name
+                        unit = detectUnit(name)
+                    },
+                    amountText = amountText,
+                    onAmountChange = { amountText = it },
+                    priceText = priceText,
+                    onPriceChange = { priceText = it },
+                    unit = unit,
+                    dateMillis = dateMillis,
+                    onDateRowClick = {
+                        val cal = Calendar.getInstance().apply { timeInMillis = dateMillis }
+                        DatePickerDialog(
+                            context,
+                            { _, year, month, day ->
+                                val picked = Calendar.getInstance()
+                                picked.set(year, month, day)
+                                dateMillis = picked.timeInMillis
+                            },
+                            cal.get(Calendar.YEAR),
+                            cal.get(Calendar.MONTH),
+                            cal.get(Calendar.DAY_OF_MONTH)
+                        ).show()
                     }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = amountText,
-                    onValueChange = { amountText = it },
-                    label = { Text(if (unit == "gram") "Gram" else "Adet") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AntiqueBrass,
-                        unfocusedBorderColor = HairlineRule
-                    )
                 )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = priceText,
-                    onValueChange = { priceText = it },
-                    label = { Text("Birim alış fiyatı (TL)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AntiqueBrass,
-                        unfocusedBorderColor = HairlineRule
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            val cal = Calendar.getInstance().apply { timeInMillis = dateMillis }
-                            DatePickerDialog(
-                                context,
-                                { _, year, month, day ->
-                                    val picked = Calendar.getInstance()
-                                    picked.set(year, month, day)
-                                    dateMillis = picked.timeInMillis
-                                },
-                                cal.get(Calendar.YEAR),
-                                cal.get(Calendar.MONTH),
-                                cal.get(Calendar.DAY_OF_MONTH)
-                            ).show()
-                        }
-                        .border(BorderStroke(1.dp, HairlineRule))
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "Tarih: ", style = MaterialTheme.typography.bodyMedium, color = InkFaded)
-                    Text(
-                        text = entryDateFormat.format(dateMillis),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = InkCharcoal,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
 
                 validationError?.let { error ->
                     Text(
@@ -513,103 +546,41 @@ private fun AddEntryForm(
         )
         Spacer(modifier = Modifier.height(14.dp))
 
-        ExposedDropdownMenuBox(
-            expanded = productExpanded,
-            onExpandedChange = { productExpanded = it }
-        ) {
-            OutlinedTextField(
-                value = selectedProduct,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text(if (productNames.isEmpty()) "Ürün (yükleniyor…)" else "Ürün") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = productExpanded) },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AntiqueBrass,
-                    unfocusedBorderColor = HairlineRule
-                )
-            )
-            DropdownMenu(
-                expanded = productExpanded,
-                onDismissRequest = { productExpanded = false }
-            ) {
-                productNames.forEach { name ->
-                    DropdownMenuItem(
-                        text = { Text(name) },
-                        onClick = {
-                            selectedProduct = name
-                            productExpanded = false
-                            unit = detectUnit(name)
-                            onProductSelected(name)?.let { autoPrice ->
-                                priceText = autoPrice
-                            }
-                        }
-                    )
+        EntryFormFields(
+            productNames = productNames,
+            productLabel = if (productNames.isEmpty()) "Ürün (yükleniyor…)" else "Ürün",
+            productExpanded = productExpanded,
+            onProductExpandedChange = { productExpanded = it },
+            selectedProduct = selectedProduct,
+            onProductChosen = { name ->
+                selectedProduct = name
+                unit = detectUnit(name)
+                onProductSelected(name)?.let { autoPrice ->
+                    priceText = autoPrice
                 }
+            },
+            amountText = amountText,
+            onAmountChange = { amountText = it; productExpanded = false },
+            priceText = priceText,
+            onPriceChange = { priceText = it; productExpanded = false },
+            unit = unit,
+            dateMillis = dateMillis,
+            onDateRowClick = {
+                productExpanded = false
+                val cal = Calendar.getInstance().apply { timeInMillis = dateMillis }
+                DatePickerDialog(
+                    context,
+                    { _, year, month, day ->
+                        val picked = Calendar.getInstance()
+                        picked.set(year, month, day)
+                        dateMillis = picked.timeInMillis
+                    },
+                    cal.get(Calendar.YEAR),
+                    cal.get(Calendar.MONTH),
+                    cal.get(Calendar.DAY_OF_MONTH)
+                ).show()
             }
-        }
-
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = amountText,
-            onValueChange = { amountText = it; productExpanded = false },
-            label = { Text(if (unit == "gram") "Gram" else "Adet") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AntiqueBrass,
-                unfocusedBorderColor = HairlineRule
-            )
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = priceText,
-            onValueChange = { priceText = it; productExpanded = false },
-            label = { Text("Birim alış fiyatı (TL)") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AntiqueBrass,
-                unfocusedBorderColor = HairlineRule
-            )
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    productExpanded = false
-                    val cal = Calendar.getInstance().apply { timeInMillis = dateMillis }
-                    DatePickerDialog(
-                        context,
-                        { _, year, month, day ->
-                            val picked = Calendar.getInstance()
-                            picked.set(year, month, day)
-                            dateMillis = picked.timeInMillis
-                        },
-                        cal.get(Calendar.YEAR),
-                        cal.get(Calendar.MONTH),
-                        cal.get(Calendar.DAY_OF_MONTH)
-                    ).show()
-                }
-                .border(BorderStroke(1.dp, HairlineRule))
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = "Tarih: ", style = MaterialTheme.typography.bodyMedium, color = InkFaded)
-            Text(
-                text = entryDateFormat.format(dateMillis),
-                style = MaterialTheme.typography.bodyMedium,
-                color = InkCharcoal,
-                fontWeight = FontWeight.Medium
-            )
-        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -671,7 +642,6 @@ private fun EntryRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale("tr")) }
     val total = entry.amount * entry.pricePerUnit
 
     val isLive = hasLivePriceFor(entry, currentProducts)
@@ -695,7 +665,7 @@ private fun EntryRow(
                 color = InkCharcoal
             )
             Text(
-                text = "${entry.amount} ${entry.unit} · ${dateFormat.format(entry.dateMillis)}",
+                text = "${entry.amount} ${entry.unit} · ${entryDateFormat.format(entry.dateMillis)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = InkFaded
             )

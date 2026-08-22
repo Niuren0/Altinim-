@@ -58,6 +58,20 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+// Ekle/Düzenle formları ve kayıt satırı aynı tarih formatını kullanıyor —
+// üç ayrı yerde remember { SimpleDateFormat(...) } oluşturmak yerine tek
+// paylaşılan bir biçimlendirici.
+private val entryDateFormat = SimpleDateFormat("dd.MM.yyyy", Locale("tr"))
+
+// AddEntryForm ve EditEntryDialog'un ikisi de aynı "0'dan büyük olmalı"
+// kurallarını uyguluyordu — ortak doğrulama burada.
+private fun validateEntry(productName: String, amount: Double?, price: Double?): String? = when {
+    productName.isBlank() -> "Önce bir ürün seç."
+    amount == null || amount <= 0 -> "Geçerli bir miktar gir (0'dan büyük)."
+    price == null || price <= 0 -> "Geçerli bir fiyat gir (0'dan büyük)."
+    else -> null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HoldingsScreen(
@@ -76,6 +90,9 @@ fun HoldingsScreen(
         settings.productOrder,
         settings.hiddenProducts
     )
+    val onProductSelected: (String) -> String? = { name ->
+        products.find { it.ProductName == name }?.RoundSalesPrice
+    }
 
     Column(
         modifier = Modifier
@@ -83,10 +100,8 @@ fun HoldingsScreen(
             .verticalScroll(rememberScrollState())
     ) {
         AddEntryForm(
-            productNames = sortAndFilterProductNames(products.map { it.ProductName }, settings.productOrder, settings.hiddenProducts),
-            onProductSelected = { name ->
-                products.find { it.ProductName == name }?.RoundSalesPrice
-            },
+            productNames = productNamesForEdit,
+            onProductSelected = onProductSelected,
             onSave = { productName, amount, unit, pricePerUnit, dateMillis ->
                 viewModel.addEntry(productName, amount, unit, pricePerUnit, dateMillis)
             }
@@ -139,9 +154,7 @@ fun HoldingsScreen(
         EditEntryDialog(
             entry = entry,
             productNames = productNamesForEdit,
-            onProductSelected = { name ->
-                products.find { it.ProductName == name }?.RoundSalesPrice
-            },
+            onProductSelected = onProductSelected,
             onSave = { productName, amount, unit, pricePerUnit, dateMillis ->
                 viewModel.updateEntry(entry.id, productName, amount, unit, pricePerUnit, dateMillis)
                 entryPendingEdit = null
@@ -167,7 +180,7 @@ private fun DeleteConfirmationDialog(
         },
         text = {
             Text(
-                text = "\"${entry.productName}\" — ${entry.amount} ${entry.unit} kaydı kalıcı olarak silinecek. Emin misin?"
+                text = "\"${entry.productName}\" — ${formatAmount(entry.amount)} ${entry.unit} kaydı kalıcı olarak silinecek. Emin misin?"
             )
         },
         confirmButton = {
@@ -203,7 +216,6 @@ private fun EditEntryDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale("tr")) }
 
     var productExpanded by remember { mutableStateOf(false) }
     var selectedProduct by remember { mutableStateOf(entry.productName) }
@@ -309,7 +321,7 @@ private fun EditEntryDialog(
                 ) {
                     Text(text = "Tarih: ", style = MaterialTheme.typography.bodyMedium, color = InkFaded)
                     Text(
-                        text = dateFormat.format(dateMillis),
+                        text = entryDateFormat.format(dateMillis),
                         style = MaterialTheme.typography.bodyMedium,
                         color = InkCharcoal,
                         fontWeight = FontWeight.Medium
@@ -335,12 +347,7 @@ private fun EditEntryDialog(
                     .clickable {
                         val amount = parseTurkishNumber(amountText)
                         val price = parseTurkishNumber(priceText)
-                        validationError = when {
-                            selectedProduct.isBlank() -> "Önce bir ürün seç."
-                            amount == null || amount <= 0 -> "Geçerli bir miktar gir (0'dan büyük)."
-                            price == null || price <= 0 -> "Geçerli bir fiyat gir (0'dan büyük)."
-                            else -> null
-                        }
+                        validationError = validateEntry(selectedProduct, amount, price)
                         if (validationError == null && amount != null && price != null) {
                             onSave(selectedProduct, amount, unit, price, dateMillis)
                         }
@@ -492,8 +499,6 @@ private fun AddEntryForm(
     var dateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
     var validationError by remember { mutableStateOf<String?>(null) }
 
-    val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy", Locale("tr")) }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -597,7 +602,7 @@ private fun AddEntryForm(
         ) {
             Text(text = "Tarih: ", style = MaterialTheme.typography.bodyMedium, color = InkFaded)
             Text(
-                text = dateFormat.format(dateMillis),
+                text = entryDateFormat.format(dateMillis),
                 style = MaterialTheme.typography.bodyMedium,
                 color = InkCharcoal,
                 fontWeight = FontWeight.Medium

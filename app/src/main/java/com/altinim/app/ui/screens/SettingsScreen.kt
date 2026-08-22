@@ -21,6 +21,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,10 +29,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.altinim.app.BuildConfig
 import com.altinim.app.data.orderProductNames
 import com.altinim.app.data.repository.UpdateCheckResult
 import com.altinim.app.ui.theme.AntiqueBrass
@@ -41,6 +45,9 @@ import com.altinim.app.ui.theme.InkCharcoal
 import com.altinim.app.ui.theme.InkFaded
 import com.altinim.app.ui.theme.ParchmentLight
 import com.altinim.app.ui.theme.WaxSeal
+
+/** Yenileme aralığı için izin verilen minimum değer (saniye). */
+private const val MIN_REFRESH_INTERVAL_SECONDS = 30
 
 @Composable
 fun SettingsScreen(
@@ -52,13 +59,14 @@ fun SettingsScreen(
     var intervalText by remember(settings.refreshIntervalSeconds) {
         mutableStateOf(settings.refreshIntervalSeconds.toString())
     }
+    var intervalError by remember { mutableStateOf<String?>(null) }
 
     val orderedNames = remember(availableProducts, settings.productOrder) {
         orderProductNames(availableProducts.map { it.ProductName }, settings.productOrder)
     }
 
     // Ekran her açıldığında elle butona basmadan otomatik kontrol et.
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         updateViewModel.checkForUpdate()
     }
 
@@ -118,7 +126,7 @@ fun SettingsScreen(
             color = InkCharcoal
         )
         Text(
-            text = "Fiyatların kaç saniyede bir otomatik yenileneceği.",
+            text = "Fiyatların kaç saniyede bir otomatik yenileneceği (en az $MIN_REFRESH_INTERVAL_SECONDS sn).",
             style = MaterialTheme.typography.bodyMedium,
             color = InkFaded
         )
@@ -126,8 +134,17 @@ fun SettingsScreen(
 
         OutlinedTextField(
             value = intervalText,
-            onValueChange = { intervalText = it },
+            onValueChange = {
+                intervalText = it
+                intervalError = null
+            },
             label = { Text("Saniye") },
+            isError = intervalError != null,
+            supportingText = intervalError?.let { message ->
+                { Text(text = message, color = WaxSeal) }
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = AntiqueBrass,
@@ -136,26 +153,21 @@ fun SettingsScreen(
         )
         Spacer(modifier = Modifier.height(12.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(AntiqueBrass)
-                .clickable {
-                    val seconds = intervalText.toIntOrNull()
-                    if (seconds != null && seconds >= 5) {
+        ActionButton(
+            text = "KAYDET",
+            onClick = {
+                val seconds = intervalText.toIntOrNull()
+                when {
+                    seconds == null -> intervalError = "Geçerli bir sayı gir."
+                    seconds < MIN_REFRESH_INTERVAL_SECONDS ->
+                        intervalError = "En az $MIN_REFRESH_INTERVAL_SECONDS saniye olmalı."
+                    else -> {
+                        intervalError = null
                         viewModel.updateRefreshInterval(seconds)
                     }
                 }
-                .padding(vertical = 14.dp)
-        ) {
-            Text(
-                text = "KAYDET",
-                style = MaterialTheme.typography.labelSmall,
-                color = ParchmentLight,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-        }
+            }
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -201,7 +213,7 @@ fun SettingsScreen(
             color = InkCharcoal
         )
         Text(
-            text = "Mevcut sürüm: ${com.altinim.app.BuildConfig.VERSION_NAME}",
+            text = "Mevcut sürüm: ${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.bodyMedium,
             color = InkFaded
         )
@@ -219,24 +231,22 @@ fun SettingsScreen(
 @Composable
 private fun UpdateSection(updateViewModel: UpdateViewModel) {
     val updateState by updateViewModel.uiState.collectAsState()
+    val isDownloading by updateViewModel.isDownloading.collectAsState()
 
     when (val state = updateState) {
         null -> {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(BorderStroke(1.dp, AntiqueBrass))
-                    .clickable { updateViewModel.checkForUpdate() }
-                    .padding(vertical = 14.dp)
-            ) {
-                Text(
-                    text = "GÜNCELLEMELERİ KONTROL ET",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = InkCharcoal,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            }
+            ActionButton(
+                text = "GÜNCELLEMELERİ KONTROL ET",
+                filled = false,
+                onClick = { updateViewModel.checkForUpdate() }
+            )
+        }
+        is UpdateCheckResult.Loading -> {
+            Text(
+                text = "Kontrol ediliyor…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = InkFaded
+            )
         }
         is UpdateCheckResult.UpToDate -> {
             Text(
@@ -253,21 +263,11 @@ private fun UpdateSection(updateViewModel: UpdateViewModel) {
                     color = WaxSeal
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(BorderStroke(1.dp, AntiqueBrass))
-                        .clickable { updateViewModel.checkForUpdate() }
-                        .padding(vertical = 14.dp)
-                ) {
-                    Text(
-                        text = "TEKRAR DENE",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = InkCharcoal,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                }
+                ActionButton(
+                    text = "TEKRAR DENE",
+                    filled = false,
+                    onClick = { updateViewModel.checkForUpdate() }
+                )
             }
         }
         is UpdateCheckResult.UpdateAvailable -> {
@@ -278,25 +278,56 @@ private fun UpdateSection(updateViewModel: UpdateViewModel) {
                     color = AntiqueBrass
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(AntiqueBrass)
-                        .clickable {
-                            updateViewModel.downloadAndInstall(state.downloadUrl, state.version)
-                        }
-                        .padding(vertical = 14.dp)
-                ) {
-                    Text(
-                        text = "İNDİR VE KUR",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = ParchmentLight,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
-                }
+                ActionButton(
+                    text = if (isDownloading) "İNDİRİLİYOR…" else "İNDİR VE KUR",
+                    filled = true,
+                    enabled = !isDownloading,
+                    onClick = { updateViewModel.downloadAndInstall(state.downloadUrl, state.version) }
+                )
             }
         }
+    }
+}
+
+/**
+ * Ortak eylem butonu: dolu (filled) ya da çerçeveli (outlined) stilde,
+ * tam genişlikte, ortalanmış etiketli tıklanabilir kutu.
+ * KAYDET / KONTROL ET / TEKRAR DENE / İNDİR VE KUR butonlarındaki
+ * tekrar eden Box+clickable+Text bloğunu tek yerde toplar.
+ */
+@Composable
+private fun ActionButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    filled: Boolean = true,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    val contentColor = when {
+        !enabled -> InkFaded
+        filled -> ParchmentLight
+        else -> InkCharcoal
+    }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (filled) {
+                    Modifier.background(if (enabled) AntiqueBrass else HairlineRule)
+                } else {
+                    Modifier.border(BorderStroke(1.dp, if (enabled) AntiqueBrass else HairlineRule))
+                }
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 14.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = contentColor,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
     }
 }
 

@@ -1,8 +1,10 @@
 package com.altinim.app.data.repository
 
 import com.altinim.app.data.remote.GitHubNetworkModule
+import kotlinx.coroutines.CancellationException
 
 sealed interface UpdateCheckResult {
+    data object Loading : UpdateCheckResult
     data object UpToDate : UpdateCheckResult
     data class UpdateAvailable(val version: String, val downloadUrl: String) : UpdateCheckResult
     data class Error(val message: String) : UpdateCheckResult
@@ -20,13 +22,24 @@ class UpdateRepository {
                     UpdateCheckResult.UpdateAvailable(release.tag_name, apkAsset.browser_download_url)
                 else -> UpdateCheckResult.UpToDate
             }
+        } catch (e: CancellationException) {
+            // Coroutine iptalini yutma: yapısal eşzamanlılığın çalışması için tekrar fırlatılmalı.
+            throw e
         } catch (e: Exception) {
             UpdateCheckResult.Error(e.message ?: "Güncelleme kontrol edilemedi, internetini kontrol et.")
         }
     }
 
+    /**
+     * "v1.2.0", "1.2.0-beta" gibi sürüm etiketlerini sayısal parçalara ayırır.
+     * Bir parça tamamen sayı değilse (ör. "0-beta"), baştaki sayısal kısmı alır;
+     * hiç sayı yoksa 0 kabul eder. Böylece parça tamamen atılıp diğer parçaların
+     * kayması engellenmiş olur (ör. "1.2.0-beta" -> [1, 2, 0], [1,2] değil).
+     */
     private fun parseVersion(version: String): List<Int> =
-        version.trimStart('v', 'V').split(".").mapNotNull { it.toIntOrNull() }
+        version.trimStart('v', 'V').split(".").map { part ->
+            Regex("""\d+""").find(part)?.value?.toIntOrNull() ?: 0
+        }
 
     private fun isNewerVersion(latest: String, current: String): Boolean {
         val latestParts = parseVersion(latest)

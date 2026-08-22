@@ -5,6 +5,7 @@ import com.altinim.app.data.local.SettingsRepository
 import com.altinim.app.data.parseTurkishNumber
 import com.altinim.app.data.remote.GoldProduct
 import com.altinim.app.data.remote.NetworkModule
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -91,6 +92,8 @@ class PriceStore private constructor(context: Context) {
             lastProducts = newProducts
             _uiState.value = PriceUiState.Success(newProducts, changes)
             _stale.value = false
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             _stale.value = lastProducts != null
             if (forceLoading || _uiState.value !is PriceUiState.Success) {

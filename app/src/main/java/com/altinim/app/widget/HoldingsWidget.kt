@@ -26,6 +26,7 @@ import com.altinim.app.data.computePortfolioSummary
 import com.altinim.app.data.local.AppDatabase
 import com.altinim.app.data.repository.GoldEntryRepository
 import com.altinim.app.data.repository.PriceStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 class HoldingsWidget : GlanceAppWidget() {
@@ -35,6 +36,8 @@ class HoldingsWidget : GlanceAppWidget() {
 
         val entries = try {
             entryRepository.getAllEntries().first()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             emptyList()
         }

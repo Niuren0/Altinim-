@@ -16,7 +16,7 @@ private val Context.settingsDataStore by preferencesDataStore(name = "altinim_se
 data class AppSettings(
     val productOrder: List<String> = emptyList(),
     val hiddenProducts: Set<String> = emptySet(),
-    val refreshIntervalSeconds: Int = 20,
+    val refreshIntervalSeconds: Int = 30,
     val appLockEnabled: Boolean = false
 )
 

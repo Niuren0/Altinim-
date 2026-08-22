@@ -71,6 +71,21 @@ private fun validateEntry(productName: String, amount: Double?, price: Double?):
     else -> null
 }
 
+private fun trySave(
+    productName: String,
+    amountText: String,
+    priceText: String,
+    onValid: (amount: Double, price: Double) -> Unit
+): String? {
+    val amount = parseTurkishNumber(amountText)
+    val price = parseTurkishNumber(priceText)
+    val error = validateEntry(productName, amount, price)
+    if (error == null && amount != null && price != null) {
+        onValid(amount, price)
+    }
+    return error
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HoldingsScreen(
@@ -380,10 +395,7 @@ private fun EditEntryDialog(
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier
                     .clickable {
-                        val amount = parseTurkishNumber(amountText)
-                        val price = parseTurkishNumber(priceText)
-                        validationError = validateEntry(selectedProduct, amount, price)
-                        if (validationError == null && amount != null && price != null) {
+                        validationError = trySave(selectedProduct, amountText, priceText) { amount, price ->
                             onSave(selectedProduct, amount, unit, price, dateMillis)
                         }
                     }
@@ -589,10 +601,7 @@ private fun AddEntryForm(
                 .fillMaxWidth()
                 .background(AntiqueBrass)
                 .clickable {
-                    val amount = parseTurkishNumber(amountText)
-                    val price = parseTurkishNumber(priceText)
-                    validationError = validateEntry(selectedProduct, amount, price)
-                    if (validationError == null && amount != null && price != null) {
+                    validationError = trySave(selectedProduct, amountText, priceText) { amount, price ->
                         onSave(selectedProduct, amount, unit, price, dateMillis)
                         selectedProduct = ""
                         amountText = ""

@@ -44,6 +44,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.altinim.app.data.local.GoldEntry
 import com.altinim.app.data.remote.GoldProduct
 import com.altinim.app.data.computePortfolioSummary
+import com.altinim.app.data.currentPriceFor
 import com.altinim.app.data.hasLivePriceFor
 import com.altinim.app.data.parseTurkishNumber
 import com.altinim.app.data.sortAndFilterProductNames
@@ -618,12 +619,7 @@ private fun AddEntryForm(
                 .clickable {
                     val amount = parseTurkishNumber(amountText)
                     val price = parseTurkishNumber(priceText)
-                    validationError = when {
-                        selectedProduct.isBlank() -> "Önce bir ürün seç."
-                        amount == null || amount <= 0 -> "Geçerli bir miktar gir (0'dan büyük)."
-                        price == null || price <= 0 -> "Geçerli bir fiyat gir (0'dan büyük)."
-                        else -> null
-                    }
+                    validationError = validateEntry(selectedProduct, amount, price)
                     if (validationError == null && amount != null && price != null) {
                         onSave(selectedProduct, amount, unit, price, dateMillis)
                         selectedProduct = ""
@@ -678,11 +674,7 @@ private fun EntryRow(
     val total = entry.amount * entry.pricePerUnit
 
     val isLive = hasLivePriceFor(entry, currentProducts)
-    val currentPrice = currentProducts
-        .find { it.ProductName == entry.productName }
-        ?.RoundPurchasePrice
-        ?.let { parseTurkishNumber(it) }
-        ?: entry.pricePerUnit
+    val currentPrice = currentPriceFor(entry, currentProducts)
     val currentValue = entry.amount * currentPrice
     val profit = currentValue - total
     val profitPercent = if (total > 0) (profit / total) * 100 else 0.0

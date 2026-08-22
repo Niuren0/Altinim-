@@ -16,9 +16,13 @@ private val Context.settingsDataStore by preferencesDataStore(name = "altinim_se
 data class AppSettings(
     val productOrder: List<String> = emptyList(),
     val hiddenProducts: Set<String> = emptySet(),
-    val refreshIntervalSeconds: Int = 30,
+    val refreshIntervalSeconds: Int = MIN_REFRESH_INTERVAL_SECONDS,
     val appLockEnabled: Boolean = false
-)
+) {
+    companion object {
+        const val MIN_REFRESH_INTERVAL_SECONDS = 30
+    }
+}
 
 class SettingsRepository(private val context: Context) {
 
@@ -30,7 +34,7 @@ class SettingsRepository(private val context: Context) {
     val settings: Flow<AppSettings> = context.settingsDataStore.data.map { prefs ->
         val order = prefs[orderKey]?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
         val hidden = prefs[hiddenKey]?.split("|")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
-        val interval = prefs[intervalKey] ?: 20
+        val interval = prefs[intervalKey] ?: AppSettings.MIN_REFRESH_INTERVAL_SECONDS
         val lockEnabled = prefs[lockKey] ?: false
         AppSettings(
             productOrder = order,

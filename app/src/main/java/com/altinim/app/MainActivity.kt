@@ -4,12 +4,15 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -22,12 +25,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -40,6 +45,7 @@ import com.altinim.app.ui.theme.HairlineRule
 import com.altinim.app.ui.theme.InkCharcoal
 import com.altinim.app.ui.theme.InkFaded
 import com.altinim.app.ui.theme.WaxSeal
+import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,6 +66,7 @@ class MainActivity : FragmentActivity() {
 @Composable
 private fun AppLockGate() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val settingsRepository = remember {
         (context.applicationContext as AltinimApplication).container.settingsRepository
     }
@@ -136,10 +143,48 @@ private fun AppLockGate() {
             onUnlock = { authenticated = true },
             onRetryBiometric = { biometricAttempted = false }
         )
-        // appLockEnabled=true ama PIN kurulmamış: tutarsız/beklenmedik bir durum
-        // (Settings ekranı PIN'siz kilit açılmasına izin vermiyor). Kullanıcıyı
-        // kilitli tutup PIN'i olmayan bir ekranda sıkıştırmak yerine içeri alıyoruz.
-        else -> AltinimApp()
+        else -> InconsistentLockStateScreen(
+            onDisableLockAndContinue = {
+                scope.launch {
+                    settingsRepository.disableAppLock()
+                    authenticated = true
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun InconsistentLockStateScreen(onDisableLockAndContinue: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "Uygulama kilidi ayarı bozuk görünüyor",
+                color = InkCharcoal,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Kilit açık görünüyor ama kayıtlı bir PIN bulunamadı. " +
+                        "Devam etmek için kilidi kapatıp Ayarlar'dan yeniden kurabilirsin.",
+                color = InkFaded,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "KİLİDİ KAPAT VE DEVAM ET",
+                color = AntiqueBrass,
+                modifier = Modifier
+                    .border(BorderStroke(1.dp, AntiqueBrass))
+                    .clickable(onClick = onDisableLockAndContinue)
+                    .padding(horizontal = 20.dp, vertical = 10.dp)
+            )
+        }
     }
 }
 

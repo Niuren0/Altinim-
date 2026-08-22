@@ -50,9 +50,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun updateAppLockEnabled(enabled: Boolean) {
+    fun setAppLockPin(pin: String) {
         viewModelScope.launch {
-            repository.updateAppLockEnabled(enabled)
+            repository.setAppLockPin(pin)
+        }
+    }
+
+    fun disableAppLock() {
+        viewModelScope.launch {
+            repository.disableAppLock()
         }
     }
 }

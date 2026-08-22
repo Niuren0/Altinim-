@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,11 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.altinim.app.BuildConfig
+import com.altinim.app.data.local.AppSettings.Companion.MIN_REFRESH_INTERVAL_SECONDS
 import com.altinim.app.data.orderProductNames
 import com.altinim.app.data.repository.UpdateCheckResult
 import com.altinim.app.ui.theme.AntiqueBrass
@@ -45,9 +49,6 @@ import com.altinim.app.ui.theme.InkCharcoal
 import com.altinim.app.ui.theme.InkFaded
 import com.altinim.app.ui.theme.ParchmentLight
 import com.altinim.app.ui.theme.WaxSeal
-
-/** Yenileme aralığı için izin verilen minimum değer (saniye). */
-private const val MIN_REFRESH_INTERVAL_SECONDS = 30
 
 @Composable
 fun SettingsScreen(
@@ -60,6 +61,7 @@ fun SettingsScreen(
         mutableStateOf(settings.refreshIntervalSeconds.toString())
     }
     var intervalError by remember { mutableStateOf<String?>(null) }
+    var showPinDialog by remember { mutableStateOf(false) }
 
     val orderedNames = remember(availableProducts, settings.productOrder) {
         orderProductNames(availableProducts.map { it.ProductName }, settings.productOrder)
@@ -177,7 +179,8 @@ fun SettingsScreen(
             color = InkCharcoal
         )
         Text(
-            text = "Açıksa uygulama her açılışta parmak izi/yüz tanıma isteyecek.",
+            text = "Açıksa uygulama her açılışta PIN isteyecek. Cihazında parmak izi " +
+                    "kayıtlıysa, PIN yerine kısayol olarak parmak izini de kullanabilirsin.",
             style = MaterialTheme.typography.bodyMedium,
             color = InkFaded
         )
@@ -187,7 +190,13 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .border(BorderStroke(1.dp, HairlineRule))
-                .clickable { viewModel.updateAppLockEnabled(!settings.appLockEnabled) }
+                .clickable {
+                    if (settings.appLockEnabled) {
+                        viewModel.disableAppLock()
+                    } else {
+                        showPinDialog = true
+                    }
+                }
                 .padding(14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -202,6 +211,28 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.labelSmall,
                 color = if (settings.appLockEnabled) BottleInk else InkFaded,
                 fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        if (settings.appLockEnabled) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "PIN'i değiştir",
+                style = MaterialTheme.typography.labelSmall,
+                color = AntiqueBrass,
+                modifier = Modifier
+                    .clickable { showPinDialog = true }
+                    .padding(vertical = 4.dp)
+            )
+        }
+
+        if (showPinDialog) {
+            AppLockPinDialog(
+                onDismiss = { showPinDialog = false },
+                onConfirm = { pin ->
+                    viewModel.setAppLockPin(pin)
+                    showPinDialog = false
+                }
             )
         }
 
@@ -287,6 +318,92 @@ private fun UpdateSection(updateViewModel: UpdateViewModel) {
             }
         }
     }
+}
+
+/**
+ * Uygulama kilidi için PIN belirleme/değiştirme diyaloğu.
+ * PIN 4-6 haneli rakamlardan oluşmalı ve tekrar alanıyla eşleşmeli.
+ * Doğrulanan PIN, çağıran tarafa (onConfirm) düz metin olarak sadece bu
+ * diyalogdan çıkışta bir kez iletilir; kalıcı olarak asla düz metin
+ * saklanmaz (bkz. SettingsRepository.setAppLockPin).
+ */
+@Composable
+private fun AppLockPinDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (pin: String) -> Unit
+) {
+    var pin by remember { mutableStateOf("") }
+    var confirmPin by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    fun onlyDigits(input: String, maxLength: Int = 6): String =
+        input.filter(Char::isDigit).take(maxLength)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Uygulama PIN'i") },
+        text = {
+            Column {
+                Text(
+                    text = "4-6 haneli bir PIN belirle.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = InkFaded
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = pin,
+                    onValueChange = {
+                        pin = onlyDigits(it)
+                        error = null
+                    },
+                    label = { Text("PIN") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AntiqueBrass,
+                        unfocusedBorderColor = HairlineRule
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = confirmPin,
+                    onValueChange = {
+                        confirmPin = onlyDigits(it)
+                        error = null
+                    },
+                    label = { Text("PIN (tekrar)") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AntiqueBrass,
+                        unfocusedBorderColor = HairlineRule
+                    )
+                )
+                if (error != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = error!!, color = WaxSeal, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                when {
+                    pin.length < 4 -> error = "PIN en az 4 haneli olmalı."
+                    pin != confirmPin -> error = "Girdiğin PIN'ler eşleşmiyor."
+                    else -> onConfirm(pin)
+                }
+            }) {
+                Text("KAYDET", color = AntiqueBrass)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("İPTAL", color = InkFaded)
+            }
+        }
+    )
 }
 
 /**

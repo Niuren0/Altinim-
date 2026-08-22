@@ -17,6 +17,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.altinim.app.AltinimApplication
 import com.altinim.app.data.computePortfolioSummary
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 class HoldingsWidget : GlanceAppWidget() {
@@ -26,6 +27,8 @@ class HoldingsWidget : GlanceAppWidget() {
 
         val entries = try {
             container.goldEntryRepository.getAllEntries().first()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             emptyList()
         }

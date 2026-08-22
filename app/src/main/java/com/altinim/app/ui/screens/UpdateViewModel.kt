@@ -14,10 +14,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.altinim.app.AltinimApplication
 import com.altinim.app.BuildConfig
 import com.altinim.app.data.ApkSignatureVerifier
 import com.altinim.app.data.repository.UpdateCheckResult
-import com.altinim.app.data.repository.UpdateRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,7 +26,7 @@ import java.io.File
 
 class UpdateViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = UpdateRepository()
+    private val repository = (application as AltinimApplication).container.updateRepository
 
     private val _uiState = MutableStateFlow<UpdateCheckResult?>(null)
     val uiState: StateFlow<UpdateCheckResult?> = _uiState.asStateFlow()

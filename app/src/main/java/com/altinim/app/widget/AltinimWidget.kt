@@ -15,6 +15,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.altinim.app.AltinimApplication
 import com.altinim.app.data.sortAndFilterGoldProducts
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 
 class AltinimWidget : GlanceAppWidget() {
@@ -31,6 +32,8 @@ class AltinimWidget : GlanceAppWidget() {
 
         val settings = try {
             container.settingsRepository.settings.first()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             null
         }

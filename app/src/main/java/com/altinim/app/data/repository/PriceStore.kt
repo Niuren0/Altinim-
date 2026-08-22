@@ -3,6 +3,7 @@ package com.altinim.app.data.repository
 import com.altinim.app.data.local.SettingsRepository
 import com.altinim.app.data.parseTurkishNumber
 import com.altinim.app.data.remote.GoldProduct
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -90,6 +91,8 @@ class PriceStore(
             lastProducts = newProducts
             _uiState.value = PriceUiState.Success(newProducts, changes)
             _stale.value = false
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             _stale.value = lastProducts != null
             if (forceLoading || _uiState.value !is PriceUiState.Success) {
@@ -133,6 +136,8 @@ class PriceStore(
         (uiState.value as? PriceUiState.Success)?.let { return it.products }
         return try {
             repository.fetchPrices()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             emptyList()
         }

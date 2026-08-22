@@ -7,6 +7,7 @@ import com.altinim.app.data.remote.NetworkModule
 import com.altinim.app.data.repository.GoldEntryRepository
 import com.altinim.app.data.repository.PriceRepository
 import com.altinim.app.data.repository.PriceStore
+import com.altinim.app.data.repository.UpdateRepository
 
 class AppContainer(context: Context) {
 
@@ -22,5 +23,9 @@ class AppContainer(context: Context) {
 
     val priceStore: PriceStore by lazy {
         PriceStore(PriceRepository(NetworkModule.kurpanoApi), settingsRepository)
+    }
+
+    val updateRepository: UpdateRepository by lazy {
+        UpdateRepository()
     }
 }

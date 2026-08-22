@@ -1,6 +1,7 @@
 package com.altinim.app.ui.screens
 
 import android.app.DatePickerDialog
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -69,6 +70,20 @@ private fun validateEntry(productName: String, amount: Double?, price: Double?):
     amount == null || amount <= 0 -> "Geçerli bir miktar gir (0'dan büyük)."
     price == null || price <= 0 -> "Geçerli bir fiyat gir (0'dan büyük)."
     else -> null
+}
+
+// AddEntryForm ve EditEntryDialog'daki tarih seçici satırının ortak mantığı.
+private fun showDatePicker(context: Context, currentMillis: Long, onPicked: (Long) -> Unit) {
+    val cal = Calendar.getInstance().apply { timeInMillis = currentMillis }
+    DatePickerDialog(
+        context,
+        { _, year, month, day ->
+            onPicked(Calendar.getInstance().apply { set(year, month, day) }.timeInMillis)
+        },
+        cal.get(Calendar.YEAR),
+        cal.get(Calendar.MONTH),
+        cal.get(Calendar.DAY_OF_MONTH)
+    ).show()
 }
 
 private fun trySave(
@@ -363,18 +378,7 @@ private fun EditEntryDialog(
                     unit = unit,
                     dateMillis = dateMillis,
                     onDateRowClick = {
-                        val cal = Calendar.getInstance().apply { timeInMillis = dateMillis }
-                        DatePickerDialog(
-                            context,
-                            { _, year, month, day ->
-                                val picked = Calendar.getInstance()
-                                picked.set(year, month, day)
-                                dateMillis = picked.timeInMillis
-                            },
-                            cal.get(Calendar.YEAR),
-                            cal.get(Calendar.MONTH),
-                            cal.get(Calendar.DAY_OF_MONTH)
-                        ).show()
+                        showDatePicker(context, dateMillis) { dateMillis = it }
                     }
                 )
 
@@ -579,18 +583,7 @@ private fun AddEntryForm(
             dateMillis = dateMillis,
             onDateRowClick = {
                 productExpanded = false
-                val cal = Calendar.getInstance().apply { timeInMillis = dateMillis }
-                DatePickerDialog(
-                    context,
-                    { _, year, month, day ->
-                        val picked = Calendar.getInstance()
-                        picked.set(year, month, day)
-                        dateMillis = picked.timeInMillis
-                    },
-                    cal.get(Calendar.YEAR),
-                    cal.get(Calendar.MONTH),
-                    cal.get(Calendar.DAY_OF_MONTH)
-                ).show()
+                showDatePicker(context, dateMillis) { dateMillis = it }
             }
         )
 
